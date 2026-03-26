@@ -95,10 +95,13 @@ export default function SubmissionsPage() {
                 <thead>
                   <tr>
                     <th style={{ width: '5%' }}>#</th>
-                    <th style={{ width: '20%' }}>Team Name</th>
-                    <th style={{ width: '45%' }}>Answer</th>
-                    <th style={{ width: '15%' }}>Time</th>
-                    <th style={{ width: '15%' }}>Timestamp</th>
+                    <th style={{ width: '15%' }}>Team Name</th>
+                    <th style={{ width: '30%' }}>Answer</th>
+                    <th style={{ width: '10%' }}>Start Time</th>
+                    <th style={{ width: '10%' }}>End Time</th>
+                    <th style={{ width: '10%' }}>Duration</th>
+                    <th style={{ width: '10%' }}>Time</th>
+                    <th style={{ width: '10%' }}>Timestamp</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -123,6 +126,15 @@ export default function SubmissionsPage() {
                       </td>
                       <td style={{ color: 'var(--text-primary)', maxWidth: '300px', wordBreak: 'break-word' }}>
                         {sub.answer}
+                      </td>
+                      <td style={{ color: 'var(--neon-blue)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                        {sub.startTime ? new Date(sub.startTime).toLocaleTimeString() : '—'}
+                      </td>
+                      <td style={{ color: 'var(--neon-green)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                        {sub.endTime ? new Date(sub.endTime).toLocaleTimeString() : '—'}
+                      </td>
+                      <td style={{ color: 'var(--neon-purple)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                        {sub.duration || '—'}
                       </td>
                       <td style={{ color: 'var(--neon-blue)', fontFamily: 'monospace', fontSize: '0.85rem' }}>
                         {sub.submissionTime || '—'}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/firebaseConfig';
@@ -10,6 +10,48 @@ export default function MainScreen() {
   const [answer, setAnswer] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
   const [errorMsg, setErrorMsg] = useState('');
+  const [hasStarted, setHasStarted] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
+
+  useEffect(() => {
+    const storedStartTime = localStorage.getItem('glitched_startTime');
+    if (storedStartTime) {
+      setStartTime(parseInt(storedStartTime, 10));
+      setHasStarted(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let interval;
+    if (hasStarted && startTime) {
+      // Calculate immediate elapsed time securely
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      interval = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [hasStarted, startTime]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const handleStart = (e) => {
+    e.preventDefault();
+    if (!teamName.trim()) {
+      setErrorMsg('Team name is required to start.');
+      return;
+    }
+    setErrorMsg('');
+    const now = Date.now();
+    setStartTime(now);
+    setHasStarted(true);
+    localStorage.setItem('glitched_startTime', now.toString());
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,6 +86,9 @@ export default function MainScreen() {
           answer: answer.trim(),
           timestamp: serverTimestamp(),
           submissionTime,
+          startTime: new Date(startTime).toLocaleString('en-US'),
+          endTime: new Date().toLocaleString('en-US'),
+          duration: formatTime(elapsedTime),
         }),
         timeoutPromise,
       ]);
@@ -51,6 +96,10 @@ export default function MainScreen() {
       setStatus('success');
       setTeamName('');
       setAnswer('');
+      setHasStarted(false);
+      setStartTime(null);
+      setElapsedTime(0);
+      localStorage.removeItem('glitched_startTime');
     } catch (err) {
       console.error('Submission error:', err);
       setStatus('error');
@@ -213,75 +262,127 @@ export default function MainScreen() {
                     onChange={(e) => setTeamName(e.target.value)}
                     placeholder="Enter your team name..."
                     className="neon-input rounded-xl text-lg px-5 py-4"
-                    disabled={status === 'loading'}
+                    disabled={status === 'loading' || hasStarted}
                   />
                 </motion.div>
 
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.7 }}
-                >
-                  <label
-                    className="block text-xs uppercase tracking-widest mb-2"
-                    style={{ fontFamily: 'Orbitron', color: 'var(--neon-blue)' }}
+                {!hasStarted && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="pt-2"
                   >
-                    Decoded Answer
-                  </label>
-                  <textarea
-                    id="answer"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Transmit your conclusion..."
-                    rows={8}
-                    className="neon-input rounded-xl resize-none text-lg px-5 py-4"
-                    disabled={status === 'loading'}
-                  />
-                </motion.div>
-
-                {/* Error */}
-                <AnimatePresence>
-                  {errorMsg && (
-                    <motion.p
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="text-sm text-center"
-                      style={{ color: 'var(--neon-red)', textShadow: '0 0 8px var(--neon-red)' }}
+                    <motion.button
+                      type="button"
+                      onClick={handleStart}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="neon-button w-full rounded-xl text-lg py-5 tracking-widest"
+                      style={{
+                        borderColor: 'var(--neon-green)',
+                        color: 'var(--neon-green)',
+                        textShadow: '0 0 8px var(--neon-green)',
+                        boxShadow: '0 0 10px rgba(0,255,136,0.3), inset 0 0 10px rgba(0,255,136,0.1)',
+                      }}
                     >
-                      ⚠ {errorMsg}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
+                      ▶ START TIMER
+                    </motion.button>
+                  </motion.div>
+                )}
 
-                {/* Submit */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                  className="pt-2"
-                >
-                  <motion.button
-                    type="submit"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    disabled={status === 'loading'}
-                    className="neon-button w-full rounded-xl text-lg py-5 tracking-widest"
-                  >
-                    {status === 'loading' ? (
-                      <span className="flex items-center justify-center gap-3">
-                        {/* Spinner */}
-                        <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="60" strokeLinecap="round" />
-                        </svg>
-                        TRANSMITTING
-                        <span className="loading-dots" />
-                      </span>
-                    ) : (
-                      '⟐ TRANSMIT RESPONSE ⟐'
-                    )}
-                  </motion.button>
-                </motion.div>
+                {hasStarted && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center py-4 rounded-xl mb-4"
+                      style={{
+                        background: 'rgba(0, 247, 255, 0.05)',
+                        border: '1px solid rgba(0, 247, 255, 0.2)',
+                      }}
+                    >
+                      <p className="text-xs tracking-widest uppercase mb-1" style={{ color: 'var(--text-secondary)' }}>
+                        Time Elapsed
+                      </p>
+                      <p
+                        className="text-4xl font-bold"
+                        style={{
+                          fontFamily: 'Orbitron',
+                          color: 'var(--neon-blue)',
+                          textShadow: '0 0 15px rgba(0,247,255,0.8)',
+                        }}
+                      >
+                        {formatTime(elapsedTime)}
+                      </p>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <label
+                        className="block text-xs uppercase tracking-widest mb-2"
+                        style={{ fontFamily: 'Orbitron', color: 'var(--neon-blue)' }}
+                      >
+                        Decoded Answer
+                      </label>
+                      <textarea
+                        id="answer"
+                        value={answer}
+                        onChange={(e) => setAnswer(e.target.value)}
+                        placeholder="Transmit your conclusion..."
+                        rows={8}
+                        className="neon-input rounded-xl resize-none text-lg px-5 py-4"
+                        disabled={status === 'loading'}
+                      />
+                    </motion.div>
+
+                    {/* Error */}
+                    <AnimatePresence>
+                      {errorMsg && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="text-sm text-center"
+                          style={{ color: 'var(--neon-red)', textShadow: '0 0 8px var(--neon-red)' }}
+                        >
+                          ⚠ {errorMsg}
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Submit */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="pt-2"
+                    >
+                      <motion.button
+                        type="submit"
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.97 }}
+                        disabled={status === 'loading'}
+                        className="neon-button w-full rounded-xl text-lg py-5 tracking-widest"
+                      >
+                        {status === 'loading' ? (
+                          <span className="flex items-center justify-center gap-3">
+                            <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="60" strokeLinecap="round" />
+                            </svg>
+                            TRANSMITTING
+                            <span className="loading-dots" />
+                          </span>
+                        ) : (
+                          '⟐ TRANSMIT RESPONSE ⟐'
+                        )}
+                      </motion.button>
+                    </motion.div>
+                  </>
+                )}
               </form>
 
               {/* Footer */}
