@@ -328,15 +328,32 @@ export default function MainScreen() {
                       >
                         Decoded Answer
                       </label>
-                      <textarea
-                        id="answer"
-                        value={answer}
-                        onChange={(e) => setAnswer(e.target.value)}
-                        placeholder="Transmit your conclusion..."
-                        rows={8}
-                        className="neon-input rounded-xl resize-none text-lg px-5 py-4"
-                        disabled={status === 'loading'}
-                      />
+                      <div className="flex flex-col gap-4">
+                        {['Human interference', 'Killed By AI robot'].map((option) => {
+                          const isSelected = answer === option;
+                          return (
+                            <motion.button
+                              key={option}
+                              type="button"
+                              onClick={() => setAnswer(option)}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              disabled={status === 'loading'}
+                              className="neon-input rounded-xl text-lg px-5 py-4 text-left flex items-center gap-3 transition-colors duration-300"
+                              style={{
+                                borderColor: isSelected ? 'var(--neon-green)' : 'rgba(0, 247, 255, 0.3)',
+                                color: isSelected ? 'var(--neon-green)' : 'var(--text-primary)',
+                                textShadow: isSelected ? '0 0 8px var(--neon-green)' : 'none',
+                                boxShadow: isSelected ? '0 0 15px rgba(0,255,136,0.2), inset 0 0 10px rgba(0,255,136,0.1)' : 'none',
+                                background: isSelected ? 'rgba(0, 255, 136, 0.05)' : 'transparent',
+                              }}
+                            >
+                              <span className="text-2xl">{isSelected ? '◉' : '〇'}</span>
+                              <span style={{ fontFamily: 'Orbitron' }}>{option}</span>
+                            </motion.button>
+                          );
+                        })}
+                      </div>
                     </motion.div>
 
                     {/* Error */}
